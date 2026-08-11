@@ -11,3 +11,6 @@ data/browser*
 credentials.json
 gmail-token.json
 data/gmail/
+
+screenshots/reservation/*
+!screenshots/reservation/.gitkeep

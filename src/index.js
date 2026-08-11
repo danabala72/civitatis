@@ -39,10 +39,30 @@ async function main() {
     }
 
     console.log("[App] Browser is ready.");
-    console.log("[App] Close with Ctrl+C.");
+
+    // =========================
+    // PARSE BOOKING LIST
+    // =========================
+
+    const bookings =
+      await provider.getBookings();
+
+    console.log(
+      JSON.stringify(
+        bookings,
+        null,
+        2
+      )
+    );
   } catch (error) {
-    console.error("[App] Error:", error);
+    console.error(
+      "[App] Error:",
+      error
+    );
+
     process.exitCode = 1;
+  } finally {
+    await browser.stop()
   }
 }
 

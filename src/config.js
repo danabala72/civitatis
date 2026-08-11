@@ -14,7 +14,7 @@ export const config = {
     executablePath: process.env.BROWSER_EXECUTABLE_PATH,
 
     userDataDir:
-      process.env.BROWSER_USER_DATA_DIR || "./data/browser",
+      process.env.BROWSER_USER_DATA_DIR || "./data/browser-profile",
 
     headless:
       process.env.BROWSER_HEADLESS === "true",
