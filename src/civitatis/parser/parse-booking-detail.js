@@ -494,7 +494,7 @@ async function showClientTelephone(page) {
     {
       timeout: 5000,
     }
-  ).catch(() => {});
+  ).catch(() => { });
 
   const phone =
     await getPhoneFromSection(
@@ -502,8 +502,7 @@ async function showClientTelephone(page) {
     );
 
   console.log(
-    `[Civitatis] Client phone: ${
-      phone || "not found"
+    `[Civitatis] Client phone: ${phone || "not found"
     }`
   );
 

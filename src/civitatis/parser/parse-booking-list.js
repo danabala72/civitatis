@@ -1,4 +1,9 @@
+import dayjs from "dayjs";
+import customParseFormat from "dayjs/plugin/customParseFormat.js";
+
 import { sleep } from "../../utils/sleep.js";
+
+dayjs.extend(customParseFormat);
 
 export async function parseBookingList(page) {
   console.log("[Civitatis] Parsing booking list...");
@@ -9,20 +14,93 @@ export async function parseBookingList(page) {
    * =====================================================
    * DATE COUNT
    * =====================================================
+   *
+   * Hanya proses 2 tanggal future terdekat.
+   *
+   * Contoh hari ini:
+   * August 12, 2026
+   *
+   * 12 -> skip
+   * 13 -> process
+   * 14 -> process
    */
+
+  await page.waitForSelector(
+    "ul.accordion > li.accordion-item",
+    {
+      timeout: 15000,
+    }
+  );
 
   const total = await page.$$eval(
     "ul.accordion > li.accordion-item",
     items => items.length
   );
 
-  /*
-   * Hanya proses 2 tanggal terdekat.
-   */
-  const dateCount = Math.min(total, 2);
+  const today =
+    dayjs().startOf("day");
+
+  const nearestDates = [];
+
+  for (
+    let index = 0;
+    index < total;
+    index++
+  ) {
+    const dateItem =
+      await getDateItem(
+        page,
+        index
+      );
+
+    if (!dateItem) {
+      continue;
+    }
+
+    const dateText =
+      await getDate(dateItem);
+
+    const date =
+      parseCivitatisDate(
+        dateText
+      );
+
+    if (!date) {
+      console.log(
+        `[Civitatis] Invalid date: ${dateText}`
+      );
+
+      continue;
+    }
+
+    /*
+     * Jangan ambil hari ini
+     * atau tanggal yang sudah lewat.
+     */
+    if (
+      date.isSame(today, "day") ||
+      date.isBefore(today, "day")
+    ) {
+      continue;
+    }
+
+    nearestDates.push({
+      index,
+      dateText,
+    });
+
+    /*
+     * Cukup 2 tanggal future
+     */
+    if (
+      nearestDates.length === 2
+    ) {
+      break;
+    }
+  }
 
   console.log(
-    `[Civitatis] Found ${total} dates. Processing ${dateCount} nearest dates.`
+    `[Civitatis] Found ${total} dates. Processing ${nearestDates.length} nearest future dates.`
   );
 
   /*
@@ -33,33 +111,37 @@ export async function parseBookingList(page) {
 
   for (
     let dateIndex = 0;
-    dateIndex < dateCount;
+    dateIndex < nearestDates.length;
     dateIndex++
   ) {
-    /*
-     * DOM berubah setelah service diklik.
-     * Karena itu selalu ambil ulang date item.
-     */
+    const targetDate =
+      nearestDates[dateIndex];
 
-    const dateItem = await getDateItem(
-      page,
-      dateIndex
-    );
+    /*
+     * DOM bisa berubah setelah service diklik.
+     *
+     * Karena itu kita SELALU mengambil ulang
+     * date item menggunakan index asli.
+     */
+    const dateItem =
+      await getDateItem(
+        page,
+        targetDate.index
+      );
 
     if (!dateItem) {
       console.log(
-        `[Civitatis] Date ${dateIndex + 1} not found.`
+        `[Civitatis] Date ${targetDate.index + 1} not found.`
       );
 
       continue;
     }
 
-    const date = await getDate(
-      dateItem
-    );
+    const date =
+      targetDate.dateText;
 
     console.log(
-      `\n[Civitatis] Date ${dateIndex + 1}/${dateCount}: ${date}`
+      `\n[Civitatis] Date ${dateIndex + 1}/${nearestDates.length}: ${date}`
     );
 
     /*
@@ -104,7 +186,7 @@ export async function parseBookingList(page) {
       const currentDateItem =
         await getDateItem(
           page,
-          dateIndex
+          targetDate.index
         );
 
       if (!currentDateItem) {
@@ -183,10 +265,7 @@ export async function parseBookingList(page) {
        */
 
       if (!expanded) {
-        console.log(
-          "[Civitatis] Clicking service..."
-        );
-
+    
         try {
           await serviceRow.click();
 
@@ -196,10 +275,6 @@ export async function parseBookingList(page) {
            */
           await sleep(2000);
         } catch (error) {
-          console.log(
-            `[Civitatis] Failed to click service: ${error.message}`
-          );
-
           services.push({
             index: serviceIndex,
             time,
@@ -280,6 +355,35 @@ export async function parseBookingList(page) {
   );
 
   return result;
+}
+
+
+/*
+ * =====================================================
+ * PARSE CIVITATIS DATE
+ * =====================================================
+ */
+
+function parseCivitatisDate(value) {
+  if (!value) {
+    return null;
+  }
+
+  const text = value
+    .trim()
+    .replace(/^[^,]+,\s*/, "");
+
+  const date = dayjs(
+    text,
+    "MMMM D, YYYY",
+    true
+  );
+
+  if (!date.isValid()) {
+    return null;
+  }
+
+  return date.startOf("day");
 }
 
 
