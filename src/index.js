@@ -55,6 +55,12 @@ async function main() {
       `[App] Browser closed. ${bookings.length} bookings parsed.`
     );
 
+    if (!bookings.length) {
+      console.warn("[App] No bookings found. Nothing to upsert.");
+      process.exitCode = 0;
+      return;
+    }
+
     const normalizer =
       new NormalizeReservationService();
 
@@ -69,11 +75,32 @@ async function main() {
           )
       );
 
+    console.log(
+      `[App] Normalized ${reservations.length} reservations.`
+    );
+
     const results =
       await reservationService.upsertMany(
         reservations,
         "CIVITATIS"
       );
+
+    const created = results.filter(r => r.action === "CREATED").length;
+    const updated = results.filter(r => r.action === "UPDATED").length;
+    const failed = results.filter(r => r.action === "FAILED").length;
+
+    console.log(
+      `[App] Upsert complete. created=${created} updated=${updated} failed=${failed}`
+    );
+
+    for (const res of results) {
+      if (res.action === "FAILED") {
+        console.error(
+          `[App] Failed supplier_booking_id=${res.supplier_booking_id}:`,
+          res.error
+        );
+      }
+    }
 
   } catch (error) {
     console.error(

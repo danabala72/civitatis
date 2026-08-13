@@ -12,6 +12,10 @@ export class ReservationService {
      * CIVITATIS -> 3
      */
     async getChannelId(channelCode) {
+        console.log(
+            `[ReservationService] Looking up channel: ${channelCode}`
+        );
+
         const [rows] = await this.db.execute(
             `
         SELECT id
@@ -28,6 +32,10 @@ export class ReservationService {
                 `Channel "${channelCode}" not found or inactive.`
             );
         }
+
+        console.log(
+            `[ReservationService] Channel ${channelCode} -> id=${rows[0].id}`
+        );
 
         return rows[0].id;
     }
@@ -72,6 +80,10 @@ export class ReservationService {
         const channelId =
             await this.getChannelId(channelCode);
 
+        console.log(
+            `[ReservationService] Upserting supplier_booking_id=${reservation.supplier_booking_id} channel=${channelCode}`
+        );
+
         const connection =
             await this.db.getConnection();
 
@@ -90,7 +102,6 @@ export class ReservationService {
                     `
             SELECT
               id,
-              reservation_number,
               status
             FROM reservations
             WHERE channel_id = ?
@@ -181,15 +192,16 @@ export class ReservationService {
 
                 await connection.commit();
 
+                console.log(
+                    `[ReservationService] Updated id=${existing.id} supplier_booking_id=${reservation.supplier_booking_id}`
+                );
+
                 return {
                     success: true,
 
                     action: "UPDATED",
 
                     id: existing.id,
-
-                    reservation_number:
-                        existing.reservation_number,
 
                     supplier_booking_id:
                         reservation.supplier_booking_id,
@@ -206,15 +218,10 @@ export class ReservationService {
              * ==========================================
              */
 
-            const reservationNumber =
-                this.generateReservationNumber();
-
             const [result] =
                 await connection.execute(
                     `
             INSERT INTO reservations (
-              reservation_number,
-
               channel_id,
 
               supplier_booking_id,
@@ -269,13 +276,10 @@ export class ReservationService {
               ?,
               ?,
               ?,
-              ?,
               ?
             )
           `,
                     [
-                        reservationNumber,
-
                         channelId,
 
                         reservation.supplier_booking_id,
@@ -312,15 +316,16 @@ export class ReservationService {
 
             await connection.commit();
 
+            console.log(
+                `[ReservationService] Created id=${result.insertId} supplier_booking_id=${reservation.supplier_booking_id}`
+            );
+
             return {
                 success: true,
 
                 action: "CREATED",
 
                 id: result.insertId,
-
-                reservation_number:
-                    reservationNumber,
 
                 supplier_booking_id:
                     reservation.supplier_booking_id,
@@ -355,6 +360,10 @@ export class ReservationService {
             );
         }
 
+        console.log(
+            `[ReservationService] upsertMany started. count=${reservations.length} channel=${channelCode}`
+        );
+
         const results = [];
 
         for (const reservation of reservations) {
@@ -367,6 +376,11 @@ export class ReservationService {
 
                 results.push(result);
             } catch (error) {
+                console.error(
+                    `[ReservationService] Failed to upsert supplier_booking_id=${reservation?.supplier_booking_id}:`,
+                    error.message
+                );
+
                 results.push({
                     success: false,
 
