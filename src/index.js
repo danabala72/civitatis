@@ -6,10 +6,12 @@ import { SessionManager } from "./session/session-manager.js";
 
 import { GmailClient } from "./email/gmail-client.js";
 import { OtpService } from "./email/otp-service.js";
+import { NormalizeReservationService } from "./services/normalize-reservation-service.js";
+import { ReservationService } from "./services/reservation-service.js";
 
 async function main() {
   const browser = new BrowserManager(config);
-
+  let reservationService;
   try {
     const page = await browser.start();
 
@@ -47,13 +49,32 @@ async function main() {
     const bookings =
       await provider.getBookings();
 
+    await browser.stop();
+
     console.log(
-      JSON.stringify(
-        bookings,
-        null,
-        2
-      )
+      `[App] Browser closed. ${bookings.length} bookings parsed.`
     );
+
+    const normalizer =
+      new NormalizeReservationService();
+
+    reservationService =
+      new ReservationService();
+
+    const reservations =
+      bookings.map(
+        booking =>
+          normalizer.normalizeCivitatis(
+            booking
+          )
+      );
+
+    const results =
+      await reservationService.upsertMany(
+        reservations,
+        "CIVITATIS"
+      );
+
   } catch (error) {
     console.error(
       "[App] Error:",
@@ -62,7 +83,9 @@ async function main() {
 
     process.exitCode = 1;
   } finally {
-    await browser.stop()
+    if (reservationService) {
+      await reservationService.close();
+    }
   }
 }
 

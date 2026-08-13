@@ -7,12 +7,13 @@
     "start": "node src/index.js",
     "gmail-auth": "node src/scripts/gmail-auth.js",
     "session": "node src/scripts/check-session.js"
-
   },
   "dependencies": {
     "@google-cloud/local-auth": "^3.0.1",
+    "dayjs": "^1.11.21",
     "dotenv": "^16.4.7",
     "googleapis": "^174.0.1",
+    "mysql2": "^3.23.3",
     "puppeteer": "^24.15.0"
   }
 }
