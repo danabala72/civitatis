@@ -1,0 +1,24 @@
+Gentile Sig./Sig.ra {{name}},
+
+Grazie per aver prenotato il {{tour}} con noi per il {{date}} alle {{time}}. La vostra prenotazione per {{people}} persone è confermata e siamo entusiasti di darvi il benvenuto a Bali!
+
+Per assicurare un'esperienza fluida e piacevole, vi chiediamo cortesemente di confermare i seguenti dettagli:
+
+Conferma del luogo di ritiro  
+Attualmente abbiamo il vostro luogo di ritiro come:
+
+{{pickup}}
+
+Per favore, confermate se questo è corretto o fateci sapere se ci sono aggiornamenti.
+
+Conferma del numero WhatsApp  
+Per facilitare al nostro autista di contattarvi il giorno del tour, potete cortesemente confermare se {{phone}} è il vostro numero WhatsApp attivo? Se no, vi preghiamo di fornire quello corretto.
+
+Il vostro autista vi contatterà almeno 24 ore prima del tour per coordinare il ritiro e fornire eventuali informazioni aggiuntive.
+
+Raccomandiamo di essere pronti nel punto di ritiro almeno 15 minuti prima dell'orario previsto. Non esitate a contattarci se avete domande. Speriamo di ospitarvi per un'esperienza memorabile a Bali!
+
+Cordiali saluti,  
+Andrea
+Bali Travel Awesome  
+info: balitravelawesome690@gmail.com | +6282146397875

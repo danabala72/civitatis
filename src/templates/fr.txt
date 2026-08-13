@@ -1,0 +1,21 @@
+Cher Monsieur / Madame {{name}},
+
+Merci d'avoir réservé le {{tour}} avec nous pour le {{date}} à {{time}}. Votre réservation pour {{people}} participants est confirmée et nous sommes ravis de vous accueillir à Bali !
+
+Pour assurer une expérience fluide et agréable, nous vous demandons aimablement de confirmer les détails suivants :
+
+Confirmation du lieu de prise en charge  
+Actuellement, nous avons votre lieu de prise en charge comme :  
+{{pickup}}
+
+Confirmation du numéro WhatsApp  
+Pour faciliter la communication de notre chauffeur avec vous le jour du tour, pourriez-vous aimablement confirmer si {{phone}} est votre numéro WhatsApp actif ? Si ce n'est pas le cas, veuillez nous fournir le numéro correct.
+
+Votre chauffeur vous contactera au moins 24 heures avant le tour pour coordonner la prise en charge et fournir toute information supplémentaire.
+
+Nous recommandons d'être prêt au point de prise en charge au moins 15 minutes avant l'heure prévue. N'hésitez pas à nous contacter si vous avez des questions. Nous espérons vous accueillir pour une expérience mémorable à Bali !
+
+Cordialement,  
+Andrea  
+Bali Travel Awesome  
+info : balitravelawesome690@gmail.com | +6282146397875

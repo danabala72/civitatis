@@ -1,4 +1,5 @@
 import { config } from "./config.js";
+import path from "node:path";
 
 import { BrowserManager } from "./browser/browser-manager.js";
 import { CivitatisProvider } from "./civitatis/civitatis-provider.js";
@@ -8,6 +9,8 @@ import { GmailClient } from "./email/gmail-client.js";
 import { OtpService } from "./email/otp-service.js";
 import { NormalizeReservationService } from "./services/normalize-reservation-service.js";
 import { ReservationService } from "./services/reservation-service.js";
+import { ReservationMessageService } from "./services/reservation-message-service.js";
+import { GreenApiWhatsAppService } from "./services/whatsapp-api-service.js";
 
 async function main() {
   const browser = new BrowserManager(config);
@@ -74,6 +77,37 @@ async function main() {
             booking
           )
       );
+
+    const messageService =
+      new ReservationMessageService();
+
+    const messages =
+      await messageService.createMany(
+        reservations
+      );
+
+    const whatsappReservations =
+      messages.map(item => ({
+        ...item,
+
+        imagePath: path.resolve(
+          "screenshots/reservation",
+          `${item.supplier_booking_id}.png`
+        ),
+      }));
+
+    const whatsapp =
+      new GreenApiWhatsAppService();
+
+    const messageResult =
+      await whatsapp.sendReservations(
+        whatsappReservations
+      );
+
+    console.log(
+      "[WhatsApp] Results:",
+      messageResult
+    );
 
     console.log(
       `[App] Normalized ${reservations.length} reservations.`
