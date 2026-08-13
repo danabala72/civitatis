@@ -177,8 +177,8 @@ export class ReservationMessageService {
       : tour;
 
     return [
-      `**${tourDisplay}**`,
-      `**#${reservation.supplier_booking_id ?? "-"}**`,
+      `*${tourDisplay}*`,
+      `*#${reservation.supplier_booking_id ?? "-"}*`,
 
       "",
 
