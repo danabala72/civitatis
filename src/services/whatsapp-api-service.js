@@ -370,8 +370,8 @@ export class GreenApiWhatsAppService {
   async sleepRandom() {
     const delay =
       Math.floor(
-        Math.random() * (5000 - 2000 + 1)
-      ) + 2000;
+        Math.random() * (10000 - 5000 + 1)
+      ) + 5000;
 
     console.log(
       `[WhatsApp] Waiting ${delay}ms...`
