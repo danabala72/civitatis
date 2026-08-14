@@ -159,9 +159,7 @@ async function main() {
         await whatsapp.sendReservations(
           tomorrowWhatsApp
         );
-
-      await whatsapp.sendMessage(closingMessage);
-
+      
     } else {
       console.log(
         "[App] No reservations for tomorrow, skipping send."

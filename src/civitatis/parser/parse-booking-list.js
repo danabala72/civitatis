@@ -25,50 +25,32 @@ export async function parseBookingList(page) {
    * 14 -> process
    */
 
-  await page.waitForSelector(
-    "ul.accordion > li.accordion-item",
-    {
-      timeout: 15000,
-    }
-  );
+  await page.waitForSelector("ul.accordion > li.accordion-item", {
+    timeout: 15000,
+  });
 
   const total = await page.$$eval(
     "ul.accordion > li.accordion-item",
-    items => items.length
+    (items) => items.length,
   );
 
-  const today =
-    dayjs().startOf("day");
+  const today = dayjs().startOf("day");
 
   const nearestDates = [];
 
-  for (
-    let index = 0;
-    index < total;
-    index++
-  ) {
-    const dateItem =
-      await getDateItem(
-        page,
-        index
-      );
+  for (let index = 0; index < total; index++) {
+    const dateItem = await getDateItem(page, index);
 
     if (!dateItem) {
       continue;
     }
 
-    const dateText =
-      await getDate(dateItem);
+    const dateText = await getDate(dateItem);
 
-    const date =
-      parseCivitatisDate(
-        dateText
-      );
+    const date = parseCivitatisDate(dateText);
 
     if (!date) {
-      console.log(
-        `[Civitatis] Invalid date: ${dateText}`
-      );
+      console.log(`[Civitatis] Invalid date: ${dateText}`);
 
       continue;
     }
@@ -77,10 +59,7 @@ export async function parseBookingList(page) {
      * Jangan ambil hari ini
      * atau tanggal yang sudah lewat.
      */
-    if (
-      date.isSame(today, "day") ||
-      date.isBefore(today, "day")
-    ) {
+    if (date.isSame(today, "day") || date.isBefore(today, "day")) {
       continue;
     }
 
@@ -92,15 +71,13 @@ export async function parseBookingList(page) {
     /*
      * Cukup 2 tanggal future
      */
-    if (
-      nearestDates.length === 2
-    ) {
+    if (nearestDates.length === 2) {
       break;
     }
   }
 
   console.log(
-    `[Civitatis] Found ${total} dates. Processing ${nearestDates.length} nearest future dates.`
+    `[Civitatis] Found ${total} dates. Processing ${nearestDates.length} nearest future dates.`,
   );
 
   /*
@@ -109,13 +86,8 @@ export async function parseBookingList(page) {
    * =====================================================
    */
 
-  for (
-    let dateIndex = 0;
-    dateIndex < nearestDates.length;
-    dateIndex++
-  ) {
-    const targetDate =
-      nearestDates[dateIndex];
+  for (let dateIndex = 0; dateIndex < nearestDates.length; dateIndex++) {
+    const targetDate = nearestDates[dateIndex];
 
     /*
      * DOM bisa berubah setelah service diklik.
@@ -123,25 +95,18 @@ export async function parseBookingList(page) {
      * Karena itu kita SELALU mengambil ulang
      * date item menggunakan index asli.
      */
-    const dateItem =
-      await getDateItem(
-        page,
-        targetDate.index
-      );
+    const dateItem = await getDateItem(page, targetDate.index);
 
     if (!dateItem) {
-      console.log(
-        `[Civitatis] Date ${targetDate.index + 1} not found.`
-      );
+      console.log(`[Civitatis] Date ${targetDate.index + 1} not found.`);
 
       continue;
     }
 
-    const date =
-      targetDate.dateText;
+    const date = targetDate.dateText;
 
     console.log(
-      `\n[Civitatis] Date ${dateIndex + 1}/${nearestDates.length}: ${date}`
+      `\n[Civitatis] Date ${dateIndex + 1}/${nearestDates.length}: ${date}`,
     );
 
     /*
@@ -155,17 +120,11 @@ export async function parseBookingList(page) {
      * Child row diabaikan.
      */
 
-    const initialServiceRows =
-      await getServiceRows(
-        dateItem
-      );
+    const initialServiceRows = await getServiceRows(dateItem);
 
-    const serviceCount =
-      initialServiceRows.length;
+    const serviceCount = initialServiceRows.length;
 
-    console.log(
-      `[Civitatis] Found ${serviceCount} services.`
-    );
+    console.log(`[Civitatis] Found ${serviceCount} services.`);
 
     const services = [];
 
@@ -175,24 +134,14 @@ export async function parseBookingList(page) {
      * ===================================================
      */
 
-    for (
-      let serviceIndex = 0;
-      serviceIndex < serviceCount;
-      serviceIndex++
-    ) {
+    for (let serviceIndex = 0; serviceIndex < serviceCount; serviceIndex++) {
       /*
        * Ambil date item terbaru.
        */
-      const currentDateItem =
-        await getDateItem(
-          page,
-          targetDate.index
-        );
+      const currentDateItem = await getDateItem(page, targetDate.index);
 
       if (!currentDateItem) {
-        console.log(
-          `[Civitatis] Date item disappeared.`
-        );
+        console.log(`[Civitatis] Date item disappeared.`);
 
         continue;
       }
@@ -200,18 +149,12 @@ export async function parseBookingList(page) {
       /*
        * Ambil service rows terbaru.
        */
-      const serviceRows =
-        await getServiceRows(
-          currentDateItem
-        );
+      const serviceRows = await getServiceRows(currentDateItem);
 
-      const serviceRow =
-        serviceRows[serviceIndex];
+      const serviceRow = serviceRows[serviceIndex];
 
       if (!serviceRow) {
-        console.log(
-          `[Civitatis] Service ${serviceIndex + 1} not found.`
-        );
+        console.log(`[Civitatis] Service ${serviceIndex + 1} not found.`);
 
         continue;
       }
@@ -222,26 +165,14 @@ export async function parseBookingList(page) {
        * =================================================
        */
 
-      const service =
-        await getText(
-          serviceRow,
-          "td.__product"
-        );
+      const service = await getText(serviceRow, "td.__product");
 
-      const time =
-        await getText(
-          serviceRow,
-          "td.__date"
-        );
+      const time = await getText(serviceRow, "td.__date");
 
-      const bookingCount =
-        await getText(
-          serviceRow,
-          "td.__bookings"
-        );
+      const bookingCount = await getText(serviceRow, "td.__bookings");
 
       console.log(
-        `[Civitatis] Service ${serviceIndex + 1}/${serviceCount}: ${service}`
+        `[Civitatis] Service ${serviceIndex + 1}/${serviceCount}: ${service}`,
       );
 
       /*
@@ -250,13 +181,9 @@ export async function parseBookingList(page) {
        * =================================================
        */
 
-      const expanded =
-        await serviceRow.evaluate(
-          row =>
-            row.classList.contains(
-              "_clicked-tr"
-            )
-        );
+      const expanded = await serviceRow.evaluate((row) =>
+        row.classList.contains("_clicked-tr"),
+      );
 
       /*
        * =================================================
@@ -265,7 +192,6 @@ export async function parseBookingList(page) {
        */
 
       if (!expanded) {
-    
         try {
           await serviceRow.click();
 
@@ -293,15 +219,10 @@ export async function parseBookingList(page) {
        * =================================================
        */
 
-      const childReady =
-        await waitForChildTable(
-          serviceRow
-        );
+      const childReady = await waitForChildTable(serviceRow);
 
       if (!childReady) {
-        console.log(
-          "[Civitatis] Child table not available."
-        );
+        console.log("[Civitatis] Child table not available.");
 
         services.push({
           index: serviceIndex,
@@ -320,14 +241,9 @@ export async function parseBookingList(page) {
        * =================================================
        */
 
-      const bookings =
-        await getBookingLinks(
-          serviceRow
-        );
+      const bookings = await getBookingLinks(serviceRow);
 
-      console.log(
-        `[Civitatis] Found ${bookings.length} bookings.`
-      );
+      console.log(`[Civitatis] Found ${bookings.length} bookings.`);
 
       services.push({
         index: serviceIndex,
@@ -350,13 +266,10 @@ export async function parseBookingList(page) {
     });
   }
 
-  console.log(
-    "\n[Civitatis] Booking list parsing completed."
-  );
+  console.log("\n[Civitatis] Booking list parsing completed.");
 
   return result;
 }
-
 
 /*
  * =====================================================
@@ -369,15 +282,9 @@ function parseCivitatisDate(value) {
     return null;
   }
 
-  const text = value
-    .trim()
-    .replace(/^[^,]+,\s*/, "");
+  const text = value.trim().replace(/^[^,]+,\s*/, "");
 
-  const date = dayjs(
-    text,
-    "MMMM D, YYYY",
-    true
-  );
+  const date = dayjs(text, "MMMM D, YYYY", true);
 
   if (!date.isValid()) {
     return null;
@@ -386,25 +293,17 @@ function parseCivitatisDate(value) {
   return date.startOf("day");
 }
 
-
 /*
  * =====================================================
  * GET DATE ITEM
  * =====================================================
  */
 
-async function getDateItem(
-  page,
-  index
-) {
-  const items =
-    await page.$$(
-      "ul.accordion > li.accordion-item"
-    );
+async function getDateItem(page, index) {
+  const items = await page.$$("ul.accordion > li.accordion-item");
 
   return items[index] || null;
 }
-
 
 /*
  * =====================================================
@@ -412,15 +311,9 @@ async function getDateItem(
  * =====================================================
  */
 
-async function getDate(
-  dateItem
-) {
-  return await getText(
-    dateItem,
-    ".nextJobsRowDate .list-item-title span"
-  );
+async function getDate(dateItem) {
+  return await getText(dateItem, ".nextJobsRowDate .list-item-title span");
 }
-
 
 /*
  * =====================================================
@@ -438,21 +331,15 @@ async function getDate(
  * merupakan service.
  */
 
-async function getServiceRows(
-  dateItem
-) {
-  const rows =
-    await dateItem.$$(
-      "table._next-jobs-table_parent tbody > tr[role='row']"
-    );
+async function getServiceRows(dateItem) {
+  const rows = await dateItem.$$(
+    "table._next-jobs-table_parent tbody > tr[role='row']",
+  );
 
   const serviceRows = [];
 
   for (const row of rows) {
-    const product =
-      await row.$(
-        "td.__product"
-      );
+    const product = await row.$("td.__product");
 
     if (!product) {
       continue;
@@ -464,30 +351,21 @@ async function getServiceRows(
   return serviceRows;
 }
 
-
 /*
  * =====================================================
  * GET TEXT
  * =====================================================
  */
 
-async function getText(
-  element,
-  selector
-) {
+async function getText(element, selector) {
   try {
-    return await element.$eval(
-      selector,
-      el =>
-        el.textContent
-          .trim()
-          .replace(/\s+/g, " ")
+    return await element.$eval(selector, (el) =>
+      el.textContent.trim().replace(/\s+/g, " "),
     );
   } catch {
     return "";
   }
 }
-
 
 /*
  * =====================================================
@@ -495,34 +373,19 @@ async function getText(
  * =====================================================
  */
 
-async function waitForChildTable(
-  serviceRow,
-  timeout = 15000
-) {
-  const startedAt =
-    Date.now();
+async function waitForChildTable(serviceRow, timeout = 15000) {
+  const startedAt = Date.now();
 
-  while (
-    Date.now() - startedAt <
-    timeout
-  ) {
-    const exists =
-      await serviceRow.evaluate(
-        row => {
-          const child =
-            row.nextElementSibling;
+  while (Date.now() - startedAt < timeout) {
+    const exists = await serviceRow.evaluate((row) => {
+      const child = row.nextElementSibling;
 
-          if (!child) {
-            return false;
-          }
+      if (!child) {
+        return false;
+      }
 
-          return Boolean(
-            child.querySelector(
-              "table._next-jobs-table_child"
-            )
-          );
-        }
-      );
+      return Boolean(child.querySelector("table._next-jobs-table_child"));
+    });
 
     if (exists) {
       return true;
@@ -533,7 +396,6 @@ async function waitForChildTable(
 
   return false;
 }
-
 
 /*
  * =====================================================
@@ -547,18 +409,13 @@ async function waitForChildTable(
  * banyak link dengan href yang sama.
  */
 
-async function getBookingLinks(
-  serviceRow
-) {
-  const child =
-    await serviceRow.evaluateHandle(
-      row =>
-        row.nextElementSibling
-    );
+async function getBookingLinks(serviceRow) {
+  const child = await serviceRow.evaluateHandle(
+    (row) => row.nextElementSibling,
+  );
 
   try {
-    const childElement =
-      child.asElement();
+    const childElement = child.asElement();
 
     if (!childElement) {
       return [];
@@ -567,10 +424,9 @@ async function getBookingLinks(
     /*
      * Ambil booking rows.
      */
-    const rows =
-      await childElement.$$(
-        'table._next-jobs-table_child tbody > tr[role="row"]'
-      );
+    const rows = await childElement.$$(
+      'table._next-jobs-table_child tbody > tr[role="row"]',
+    );
 
     const bookings = [];
 
@@ -578,53 +434,42 @@ async function getBookingLinks(
       /*
        * Ambil SATU link dari booking row.
        */
-      const link =
-        await row.$(
-          'a.js-row-link[href*="/providers/v2/bookings/activity/book"]'
-        );
+      const link = await row.$(
+        'a.js-row-link[href*="/providers/v2/bookings/activity/book"]',
+      );
 
       if (!link) {
         continue;
       }
 
-      const booking =
-        await row.evaluate(
-          row => {
-            const link =
-              row.querySelector(
-                'a.js-row-link[href*="/providers/v2/bookings/activity/book"]'
-              );
-
-            return {
-              id:
-                row
-                  .querySelector(
-                    "td.__id"
-                  )
-                  ?.textContent
-                  ?.trim() || null,
-
-              traveler:
-                row
-                  .querySelector(
-                    "td.__traveler"
-                  )
-                  ?.textContent
-                  ?.trim() || null,
-
-              href:
-                link?.href || null,
-            };
-          }
+      const booking = await row.evaluate((row) => {
+        const link = row.querySelector(
+          'a.js-row-link[href*="/providers/v2/bookings/activity/book"]',
         );
+
+        return {
+          id: row.querySelector("td.__id")?.textContent?.trim() || null,
+
+          traveler:
+            row.querySelector("td.__traveler")?.textContent?.trim() || null,
+
+          people: (() => {
+            const link = row.querySelector("td:nth-child(7) a.js-row-link");
+            const source = link || row;
+            const text = source.textContent.trim();
+            const match = text.match(/(\d+)/);
+            return match ? match[1] : null;
+          })(),
+
+          href: link?.href || null,
+        };
+      });
 
       if (!booking.href) {
         continue;
       }
 
-      bookings.push(
-        booking
-      );
+      bookings.push(booking);
     }
 
     return bookings;

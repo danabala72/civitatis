@@ -12,17 +12,11 @@ export class CivitatisProvider {
   async open() {
     console.log("[Civitatis] Opening provider...");
 
-    await this.page.goto(
-      this.config.civitatis.bookingsUrl,
-      {
-        waitUntil: "domcontentloaded",
-      }
-    );
+    await this.page.goto(this.config.civitatis.bookingsUrl, {
+      waitUntil: "domcontentloaded",
+    });
 
-    console.log(
-      "[Civitatis] URL:",
-      this.page.url()
-    );
+    console.log("[Civitatis] URL:", this.page.url());
   }
 
   async login() {
@@ -36,63 +30,44 @@ export class CivitatisProvider {
 
     if (!loginForm) {
       console.log(
-        "[Civitatis] Login form not found. Session may still be active."
+        "[Civitatis] Login form not found. Session may still be active.",
       );
 
       await this.closeActivePopup();
 
-      console.log(
-        "[Civitatis] Login flow completed."
-      );
+      console.log("[Civitatis] Login flow completed.");
 
       return;
     }
 
-    await this.page.waitForSelector(
-      "#login-name",
-      {
-        visible: true,
-        timeout: 10000,
-      }
-    );
+    await this.page.waitForSelector("#login-name", {
+      visible: true,
+      timeout: 10000,
+    });
 
-    await this.page.type(
-      "#login-name",
-      this.config.civitatis.username
-    );
+    await this.page.type("#login-name", this.config.civitatis.username);
 
-    await this.page.type(
-      "#login-password",
-      this.config.civitatis.password
-    );
+    await this.page.type("#login-password", this.config.civitatis.password);
 
     const loginStartedAt = Date.now();
 
-    await this.page.click(
-      'button[data-testid="button_login"]'
-    );
+    await this.page.click('button[data-testid="button_login"]');
 
     /*
      * OTP hanya muncul jika Civitatis meminta
      * verifikasi tambahan.
      */
-    const otpRequired =
-      await this.waitForOtpModal(5000);
+    const otpRequired = await this.waitForOtpModal(5000);
 
     if (otpRequired) {
-      console.log(
-        "[Civitatis] OTP required."
-      );
+      console.log("[Civitatis] OTP required.");
 
-      const otp =
-        await this.otpService.getOtp({
-          after: loginStartedAt,
-        });
+      const otp = await this.otpService.getOtp({
+        after: loginStartedAt,
+      });
 
       if (!otp) {
-        throw new Error(
-          "[Civitatis] OTP not received."
-        );
+        throw new Error("[Civitatis] OTP not received.");
       }
 
       await this.enterOtp(otp);
@@ -116,7 +91,7 @@ export class CivitatisProvider {
       });
     } else {
       console.log(
-        "[Civitatis] OTP not required. Existing session or login completed directly."
+        "[Civitatis] OTP not required. Existing session or login completed directly.",
       );
 
       /*
@@ -129,9 +104,7 @@ export class CivitatisProvider {
       await this.closeActivePopup();
     }
 
-    console.log(
-      "[Civitatis] Login flow completed."
-    );
+    console.log("[Civitatis] Login flow completed.");
   }
 
   /**
@@ -139,17 +112,12 @@ export class CivitatisProvider {
    */
   async waitForOtpModal(timeout = 5000) {
     try {
-      await this.page.waitForSelector(
-        "#auth-code-verification-modal",
-        {
-          visible: true,
-          timeout,
-        }
-      );
+      await this.page.waitForSelector("#auth-code-verification-modal", {
+        visible: true,
+        timeout,
+      });
 
-      console.log(
-        "[Civitatis] OTP modal detected."
-      );
+      console.log("[Civitatis] OTP modal detected.");
 
       return true;
     } catch (error) {
@@ -167,17 +135,12 @@ export class CivitatisProvider {
    */
   async waitForOtpModalClosed(timeout = 10000) {
     try {
-      await this.page.waitForSelector(
-        "#auth-code-verification-modal",
-        {
-          hidden: true,
-          timeout,
-        }
-      );
+      await this.page.waitForSelector("#auth-code-verification-modal", {
+        hidden: true,
+        timeout,
+      });
 
-      console.log(
-        "[Civitatis] OTP modal closed."
-      );
+      console.log("[Civitatis] OTP modal closed.");
 
       return true;
     } catch (error) {
@@ -185,32 +148,24 @@ export class CivitatisProvider {
         /*
          * Cek sekali lagi apakah modal masih visible.
          */
-        const modal =
-          await this.page.$(
-            "#auth-code-verification-modal"
-          );
+        const modal = await this.page.$("#auth-code-verification-modal");
 
         if (!modal) {
-          console.log(
-            "[Civitatis] OTP modal removed from DOM."
-          );
+          console.log("[Civitatis] OTP modal removed from DOM.");
 
           return true;
         }
 
-        const visible =
-          await modal.isIntersectingViewport();
+        const visible = await modal.isIntersectingViewport();
 
         if (!visible) {
-          console.log(
-            "[Civitatis] OTP modal is no longer visible."
-          );
+          console.log("[Civitatis] OTP modal is no longer visible.");
 
           return true;
         }
 
         throw new Error(
-          "[Civitatis] OTP modal did not close after OTP was entered."
+          "[Civitatis] OTP modal did not close after OTP was entered.",
         );
       }
 
@@ -219,10 +174,7 @@ export class CivitatisProvider {
   }
 
   async isOtpRequired() {
-    const modal =
-      await this.page.$(
-        "#auth-code-verification-modal"
-      );
+    const modal = await this.page.$("#auth-code-verification-modal");
 
     if (!modal) {
       return false;
@@ -232,34 +184,25 @@ export class CivitatisProvider {
   }
 
   async enterOtp(otp) {
-    const inputs =
-      await this.page.$$(
-        "#auth-code-verification-modal .code-verification-inputs input"
-      );
+    const inputs = await this.page.$$(
+      "#auth-code-verification-modal .code-verification-inputs input",
+    );
 
     if (inputs.length !== 5) {
-      throw new Error(
-        `Expected 5 OTP inputs, found ${inputs.length}`
-      );
+      throw new Error(`Expected 5 OTP inputs, found ${inputs.length}`);
     }
 
     if (!/^[A-Za-z0-9]{5}$/.test(otp)) {
-      throw new Error(
-        "OTP must contain exactly 5 alphanumeric characters."
-      );
+      throw new Error("OTP must contain exactly 5 alphanumeric characters.");
     }
 
-    console.log(
-      "[Civitatis] Entering OTP..."
-    );
+    console.log("[Civitatis] Entering OTP...");
 
     for (let i = 0; i < inputs.length; i++) {
       await inputs[i].type(otp[i]);
     }
 
-    console.log(
-      "[Civitatis] OTP entered."
-    );
+    console.log("[Civitatis] OTP entered.");
   }
 
   /**
@@ -278,10 +221,7 @@ export class CivitatisProvider {
    * supaya kompatibel dengan berbagai versi
    * Puppeteer / Chromium.
    */
-  async closeActivePopup({
-    waitForPopup = false,
-    timeout = 3000,
-  } = {}) {
+  async closeActivePopup({ waitForPopup = false, timeout = 3000 } = {}) {
     try {
       let popup = null;
 
@@ -297,18 +237,13 @@ export class CivitatisProvider {
             {
               visible: true,
               timeout,
-            }
+            },
           );
 
-          popup =
-            await this.page.$(
-              ".popupbox.is-active .popupbox-content"
-            );
+          popup = await this.page.$(".popupbox.is-active .popupbox-content");
         } catch (error) {
           if (error.name === "TimeoutError") {
-            console.log(
-              "[Civitatis] No informational popup."
-            );
+            console.log("[Civitatis] No informational popup.");
 
             return false;
           }
@@ -322,31 +257,22 @@ export class CivitatisProvider {
          *
          * Cukup cek apakah popup aktif sekarang.
          */
-        popup =
-          await this.page.$(
-            ".popupbox.is-active .popupbox-content"
-          );
+        popup = await this.page.$(".popupbox.is-active .popupbox-content");
 
         if (!popup) {
-          console.log(
-            "[Civitatis] No active popup."
-          );
+          console.log("[Civitatis] No active popup.");
 
           return false;
         }
       }
 
       if (!popup) {
-        console.log(
-          "[Civitatis] No active popup."
-        );
+        console.log("[Civitatis] No active popup.");
 
         return false;
       }
 
-      console.log(
-        "[Civitatis] Informational popup detected."
-      );
+      console.log("[Civitatis] Informational popup detected.");
 
       /*
        * HTML popup yang diberikan user:
@@ -359,20 +285,15 @@ export class CivitatisProvider {
        *
        * Tidak menggunakan :has().
        */
-      const closeButton =
-        await popup.$("button");
+      const closeButton = await popup.$("button");
 
       if (!closeButton) {
-        console.log(
-          "[Civitatis] Popup found but close button not found."
-        );
+        console.log("[Civitatis] Popup found but close button not found.");
 
         return false;
       }
 
-      console.log(
-        "[Civitatis] Clicking popup close button..."
-      );
+      console.log("[Civitatis] Clicking popup close button...");
 
       await closeButton.click();
 
@@ -385,21 +306,17 @@ export class CivitatisProvider {
           {
             hidden: true,
             timeout: 3000,
-          }
+          },
         );
 
-        console.log(
-          "[Civitatis] Popup closed."
-        );
+        console.log("[Civitatis] Popup closed.");
       } catch (error) {
         if (error.name === "TimeoutError") {
           /*
            * Bisa saja popup sudah ditutup tetapi
            * class / DOM belum berubah karena animasi.
            */
-          console.log(
-            "[Civitatis] Popup close animation still active."
-          );
+          console.log("[Civitatis] Popup close animation still active.");
 
           return true;
         }
@@ -410,9 +327,7 @@ export class CivitatisProvider {
       return true;
     } catch (error) {
       if (error.name === "TimeoutError") {
-        console.log(
-          "[Civitatis] Popup timeout. Continuing..."
-        );
+        console.log("[Civitatis] Popup timeout. Continuing...");
 
         return false;
       }
@@ -422,90 +337,63 @@ export class CivitatisProvider {
   }
 
   async getBookings() {
-    console.log(
-      "[Civitatis] Getting bookings..."
-    );
+    console.log("[Civitatis] Getting bookings...");
 
     /*
-    * Pastikan booking list sudah berada
-    * di halaman yang benar.
-    */
-    if (
-      this.page.url() !==
-      this.config.civitatis.bookingsUrl
-    ) {
-      await this.page.goto(
-        this.config.civitatis.bookingsUrl,
-        {
-          waitUntil: "domcontentloaded",
-        }
-      );
+     * Pastikan booking list sudah berada
+     * di halaman yang benar.
+     */
+    if (this.page.url() !== this.config.civitatis.bookingsUrl) {
+      await this.page.goto(this.config.civitatis.bookingsUrl, {
+        waitUntil: "domcontentloaded",
+      });
     }
 
-    await this.page.waitForSelector(
-      "table._next-jobs-table_parent",
-      {
-        visible: true,
-        timeout: 15000,
-      }
-    );
+    await this.page.waitForSelector("table._next-jobs-table_parent", {
+      visible: true,
+      timeout: 15000,
+    });
 
     /*
-    * Tahap 1:
-    * Ambil list booking.
-    */
-    const bookingList =
-      await parseBookingList(
-        this.page
-      );
+     * Tahap 1:
+     * Ambil list booking.
+     */
+    const bookingList = await parseBookingList(this.page);
 
     const result = [];
 
     /*
-    * Tahap 2:
-    * Buka detail masing-masing booking.
-    */
+     * Tahap 2:
+     * Buka detail masing-masing booking.
+     */
     for (const date of bookingList) {
       for (const service of date.services) {
         for (const booking of service.bookings) {
-          console.log(
-            `[Civitatis] Opening booking ${booking.id}...`
-          );
+          console.log(`[Civitatis] Opening booking ${booking.id}...`);
 
-          const detailPage =
-            await this.page
-              .browser()
-              .newPage();
+          const detailPage = await this.page.browser().newPage();
 
           try {
-            await detailPage.goto(
-              booking.href,
-              {
-                waitUntil:
-                  "domcontentloaded",
-              }
-            );
+            await detailPage.goto(booking.href, {
+              waitUntil: "domcontentloaded",
+            });
 
             /*
-            * Tunggu Reservation details.
-            */
+             * Tunggu Reservation details.
+             */
             await detailPage.waitForSelector(
               "ul.myaccount-data > li.myaccount-data__item",
               {
                 visible: true,
                 timeout: 15000,
-              }
+              },
             );
 
             const delay = 2000 + Math.floor(Math.random() * 1001);
-            
-            await sleep(delay)
 
-            const detail =
-              await parseBookingDetail(
-                detailPage,
-                booking.id
-              );
+            await sleep(delay);
+
+            const detail = await parseBookingDetail(detailPage, booking.id);
 
             result.push({
               date: date.date,
@@ -514,8 +402,8 @@ export class CivitatisProvider {
 
               booking: {
                 id: booking.id,
-                traveler:
-                  booking.traveler,
+                traveler: booking.traveler,
+                people: booking.people,
                 href: booking.href,
               },
 
@@ -524,7 +412,7 @@ export class CivitatisProvider {
           } catch (error) {
             console.error(
               `[Civitatis] Failed booking ${booking.id}:`,
-              error.message
+              error.message,
             );
 
             result.push({
@@ -534,8 +422,8 @@ export class CivitatisProvider {
 
               booking: {
                 id: booking.id,
-                traveler:
-                  booking.traveler,
+                traveler: booking.traveler,
+                people: booking.people,
                 href: booking.href,
               },
 

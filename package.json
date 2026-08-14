@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "node src/index.js",
+    "parse-only": "node src/scripts/parse-only.js",
     "gmail-auth": "node src/scripts/gmail-auth.js",
     "session": "node src/scripts/check-session.js"
   },

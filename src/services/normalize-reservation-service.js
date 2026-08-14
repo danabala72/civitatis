@@ -5,102 +5,62 @@ dayjs.extend(customParseFormat);
 
 export class NormalizeReservationService {
   normalizeCivitatis(booking) {
-    const reservation =
-      booking.detail?.reservation ?? {};
+    const reservation = booking.detail?.reservation ?? {};
 
-    const client =
-      booking.detail?.client ?? {};
+    const client = booking.detail?.client ?? {};
 
-    const supplierBookingId =
-      booking.booking?.id;
+    const supplierBookingId = booking.booking?.id;
 
     if (!supplierBookingId) {
-      throw new Error(
-        "Civitatis booking ID is required."
-      );
+      throw new Error("Civitatis booking ID is required.");
     }
 
     return {
-      supplier_booking_id:
-        supplierBookingId,
+      supplier_booking_id: supplierBookingId,
 
-      supplier_reference:
-        null,
+      supplier_reference: null,
 
-      tour_name:
-        booking.service ?? "",
+      booking_url: booking.booking?.href ?? null,
 
-      tour_option:
-        reservation["Selected option"] ?? null,
+      tour_name: booking.service ?? "",
 
-      tour_date:
-        this.parseDate(
-          reservation["Date"] ?? booking.date
-        ),
+      tour_option: reservation["Selected option"] ?? null,
 
-      tour_time:
-        this.parseTime(
-          reservation["Time"]
-        ),
+      tour_date: this.parseDate(reservation["Date"] ?? booking.date),
 
-      customer_name:
-        client.name ??
-        booking.booking?.traveler ??
-        "",
+      tour_time: this.parseTime(reservation["Time"]),
 
-      customer_email:
-        null,
+      customer_name: client.name ?? booking.booking?.traveler ?? "",
 
-      customer_phone:
-        client.phone ?? null,
+      customer_email: null,
 
-      pax_total:
-        this.parsePax(
-          reservation["People"]
-        ),
+      customer_phone: client.phone ?? null,
 
-      language:
-        this.parseLanguage(
-          reservation["Language"]
-        ),
+      pax_total: booking.booking?.people
+        ? Number(booking.booking.people)
+        : this.parsePax(reservation["People"]),
 
-      pickup_time:
-        this.parseTime(
-          reservation["Time"]
-        ),
+      language: this.parseLanguage(reservation["Language"]),
 
-      pickup_address:
-        this.cleanPickup(
-          reservation["Pickup point"]
-        ),
+      pickup_time: this.parseTime(reservation["Time"]),
 
-      pickup_lat:
-        null,
+      pickup_address: this.cleanPickup(reservation["Pickup point"]),
 
-      pickup_lng:
-        null,
+      pickup_lat: null,
 
-      sale_price:
-        this.parseMoney(
-          reservation["Sale price"]
-        ),
+      pickup_lng: null,
 
-      net_price:
-        this.parseMoney(
-          reservation["Net price"]
-        ),
+      sale_price: this.parseMoney(reservation["Sale price"]),
 
-      currency:
-        "IDR",
+      net_price: this.parseMoney(reservation["Net price"]),
 
-      customer_note:
-        null,
+      currency: "IDR",
 
-      internal_note:
-        null,
+      customer_note: null,
 
-      status:
-        "NEW",
+      internal_note: null,
+
+      status: "NEW",
     };
   }
 
@@ -109,11 +69,7 @@ export class NormalizeReservationService {
       return null;
     }
 
-    const date = dayjs(
-      value,
-      "MMMM D, YYYY",
-      true
-    );
+    const date = dayjs(value, "MMMM D, YYYY", true);
 
     if (!date.isValid()) {
       return null;
@@ -143,29 +99,19 @@ export class NormalizeReservationService {
      *
      * Tidak harus seluruh string hanya berisi waktu.
      */
-    const match = text.match(
-      /(\d{1,2}):(\d{2})\s*(am|pm)/i
-    );
+    const match = text.match(/(\d{1,2}):(\d{2})\s*(am|pm)/i);
 
     if (!match) {
-      console.log(
-        `[Normalize] Time not recognized: ${JSON.stringify(value)}`
-      );
+      console.log(`[Normalize] Time not recognized: ${JSON.stringify(value)}`);
 
       return null;
     }
 
     let hour = Number(match[1]);
     const minute = Number(match[2]);
-    const period =
-      match[3].toLowerCase();
+    const period = match[3].toLowerCase();
 
-    if (
-      hour < 1 ||
-      hour > 12 ||
-      minute < 0 ||
-      minute > 59
-    ) {
+    if (hour < 1 || hour > 12 || minute < 0 || minute > 59) {
       return null;
     }
 
@@ -191,15 +137,11 @@ export class NormalizeReservationService {
       return 0;
     }
 
-    const text =
-      value[0] ?? "";
+    const text = value[0] ?? "";
 
-    const match =
-      text.match(/\d+/);
+    const match = text.match(/\d+/);
 
-    return match
-      ? Number(match[0])
-      : 0;
+    return match ? Number(match[0]) : 0;
   }
 
   parseLanguage(value) {
@@ -209,45 +151,19 @@ export class NormalizeReservationService {
 
     const text = value
       .normalize("NFD")
-      .replace(
-        /[\u0300-\u036f]/g,
-        ""
-      )
+      .replace(/[\u0300-\u036f]/g, "")
       .toLowerCase();
 
     const languages = {
-      IT: [
-        "italian",
-        "italiano",
-        "italien",
-      ],
+      IT: ["italian", "italiano", "italien"],
 
-      FR: [
-        "french",
-        "francais",
-        "francese",
-        "frances",
-      ],
+      FR: ["french", "francais", "francese", "frances"],
 
-      ES: [
-        "spanish",
-        "espanol",
-        "espagnol",
-        "spagnolo",
-        "espanhol",
-      ],
+      ES: ["spanish", "espanol", "espagnol", "spagnolo", "espanhol"],
     };
 
-    for (
-      const [code, keywords]
-      of Object.entries(languages)
-    ) {
-      if (
-        keywords.some(
-          keyword =>
-            text.includes(keyword)
-        )
-      ) {
+    for (const [code, keywords] of Object.entries(languages)) {
+      if (keywords.some((keyword) => text.includes(keyword))) {
         return code;
       }
     }
@@ -261,30 +177,18 @@ export class NormalizeReservationService {
     }
 
     if (Array.isArray(value)) {
-      value = value.find(
-        item =>
-          /\d/.test(item)
-      );
+      value = value.find((item) => /\d/.test(item));
     }
 
-    if (
-      typeof value !== "string"
-    ) {
+    if (typeof value !== "string") {
       return null;
     }
 
-    const number =
-      value.replace(
-        /[^\d-]/g,
-        ""
-      );
+    const number = value.replace(/[^\d-]/g, "");
 
-    const parsed =
-      Number(number);
+    const parsed = Number(number);
 
-    return Number.isFinite(parsed)
-      ? parsed
-      : null;
+    return Number.isFinite(parsed) ? parsed : null;
   }
 
   cleanPickup(value) {
@@ -292,11 +196,6 @@ export class NormalizeReservationService {
       return null;
     }
 
-    return value
-      .replace(
-        /\s*Modify pickup point\s*$/i,
-        ""
-      )
-      .trim();
+    return value.replace(/\s*Modify pickup point\s*$/i, "").trim();
   }
 }
