@@ -146,11 +146,8 @@ async function main() {
         );
 
       const previewMessage =
-        `*⬇️⬇️ TOUR BESOK (${tomorrowFormatted}) ⬇️⬇️*\n\n` +
+        `*📋 TOUR BESOK (${tomorrowFormatted})*\n\n` +
         `Total reservasi: ${tomorrowReservations.length} | Total orang: ${tomorrowPax}`;
-
-      const closingMessage =
-        `*⬆️⬆️ SELESAI ⬆️⬆️*`;
 
       await whatsapp.sendMessage(previewMessage);
 
