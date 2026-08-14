@@ -1,5 +1,6 @@
 import { config } from "./config.js";
 import path from "node:path";
+import dayjs from "dayjs";
 
 import { BrowserManager } from "./browser/browser-manager.js";
 import { CivitatisProvider } from "./civitatis/civitatis-provider.js";
@@ -86,32 +87,102 @@ async function main() {
         reservations
       );
 
-    const whatsappReservations =
-      messages.map(item => ({
-        ...item,
+    const tomorrow =
+      dayjs().add(1, "day").format("YYYY-MM-DD");
 
-        imagePath: path.resolve(
-          "screenshots/reservation",
-          `${item.supplier_booking_id}.png`
-        ),
-      }));
+    const dayAfterTomorrow =
+      dayjs().add(2, "day").format("YYYY-MM-DD");
+
+    const tomorrowReservations =
+      reservations.filter(
+        r => r.tour_date === tomorrow
+      );
+
+    const dayAfterTomorrowReservations =
+      reservations.filter(
+        r => r.tour_date === dayAfterTomorrow
+      );
+
+    const summary =
+      dayAfterTomorrowReservations.length > 0
+        ? buildDayAfterTomorrowSummary(
+          dayAfterTomorrowReservations
+        )
+        : null;
 
     const whatsapp =
       new GreenApiWhatsAppService();
 
-    const messageResult =
-      await whatsapp.sendReservations(
-        whatsappReservations
+    if (tomorrowReservations.length > 0) {
+      const tomorrowMessages =
+        await messageService.createMany(
+          tomorrowReservations
+        );
+
+      const tomorrowWhatsApp =
+        tomorrowMessages.map(item => ({
+          ...item,
+
+          imagePath: path.resolve(
+            "screenshots/reservation",
+            `${item.supplier_booking_id}.png`
+          ),
+        }));
+
+      const tomorrowDateObj =
+        dayjs(tomorrow);
+
+      const tomorrowFormatted =
+        new Intl.DateTimeFormat("id-ID", {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        }).format(tomorrowDateObj.toDate());
+
+      const tomorrowPax =
+        tomorrowReservations.reduce(
+          (sum, r) => sum + (r.pax_total || 0),
+          0
+        );
+
+      const previewMessage =
+        `*⬇️⬇️ TOUR BESOK (${tomorrowFormatted}) ⬇️⬇️*\n\n` +
+        `Total reservasi: ${tomorrowReservations.length} | Total orang: ${tomorrowPax}`;
+
+      const closingMessage =
+        `*⬆️⬆️ SELESAI ⬆️⬆️*`;
+
+      await whatsapp.sendMessage(previewMessage);
+
+
+      const tomorrowResult =
+        await whatsapp.sendReservations(
+          tomorrowWhatsApp
+        );
+
+      await whatsapp.sendMessage(closingMessage);
+
+    } else {
+      console.log(
+        "[App] No reservations for tomorrow, skipping send."
+      );
+    }
+
+    if (summary) {
+      await whatsapp.sendMessage(summary);
+
+      await whatsapp.sendMessage(
+        "*⬆️⬆️ SELESAI ⬆️⬆️*"
       );
 
-    console.log(
-      "[WhatsApp] Results:",
-      messageResult
-    );
-
-    console.log(
-      `[App] Normalized ${reservations.length} reservations.`
-    );
+      console.log(
+        "[WhatsApp] Day after tomorrow summary sent."
+      );
+    } else {
+      console.log(
+        "[App] No reservations for day after tomorrow, skipping summary."
+      );
+    }
 
     const results =
       await reservationService.upsertMany(
@@ -148,6 +219,28 @@ async function main() {
       await reservationService.close();
     }
   }
+}
+
+function buildDayAfterTomorrowSummary(reservations) {
+  const dateObj = dayjs(reservations[0]?.tour_date);
+
+  const formattedDate =
+    new Intl.DateTimeFormat("id-ID", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }).format(dateObj.toDate());
+
+  const totalPax = reservations.reduce(
+    (sum, r) => sum + (r.pax_total || 0),
+    0
+  );
+
+  return [
+    `📋 TOUR LUSA (${formattedDate})`,
+    "",
+    `Total reservasi: ${reservations.length} | Total orang: ${totalPax}`,
+  ].join("\n");
 }
 
 main();

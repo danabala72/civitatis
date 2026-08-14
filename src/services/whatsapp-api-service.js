@@ -97,13 +97,16 @@ export class GreenApiWhatsAppService {
     const sentIds =
       await this.getSentIds();
 
-    return sentIds.includes(
-      String(supplierBookingId)
+    return sentIds.some(
+      item =>
+        item.id ===
+        String(supplierBookingId)
     );
   }
 
   async markAsSent(
-    supplierBookingId
+    supplierBookingId,
+    messageResponse
   ) {
     const sentIds =
       await this.getSentIds();
@@ -111,11 +114,25 @@ export class GreenApiWhatsAppService {
     const id =
       String(supplierBookingId);
 
-    if (sentIds.includes(id)) {
+    if (
+      sentIds.some(
+        item => item.id === id
+      )
+    ) {
       return;
     }
 
-    sentIds.push(id);
+    const messageId =
+      messageResponse?.idMessage ??
+      messageResponse?.id ??
+      null;
+
+    sentIds.push({
+      id,
+      messageId: messageId
+        ? String(messageId)
+        : null,
+    });
 
     await fs.writeFile(
       this.sentFile,
@@ -267,15 +284,17 @@ export class GreenApiWhatsAppService {
      * 2. IMAGE + CAPTION
      * =========================
      */
-    const imageResult =
-      await this.sendImage(
-        imagePath,
-        caption
-      );
+    // TODO: Enable when needed
+    // const imageResult =
+    //   await this.sendImage(
+    //     imagePath,
+    //     caption
+    //   );
 
-    console.log(
-      `[WhatsApp] Image + caption sent: ${bookingId}`
-    );
+    // console.log(
+    //   `[WhatsApp] Image + caption sent: ${bookingId}`
+    // );
+
 
     /*
      * =========================
@@ -286,7 +305,8 @@ export class GreenApiWhatsAppService {
      * =========================
      */
     await this.markAsSent(
-      bookingId
+      bookingId,
+      messageResult
     );
 
     console.log(
@@ -303,7 +323,7 @@ export class GreenApiWhatsAppService {
 
       message: messageResult,
 
-      image: imageResult,
+      // image: imageResult, 
     };
   }
 

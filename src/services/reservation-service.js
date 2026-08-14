@@ -12,10 +12,6 @@ export class ReservationService {
      * CIVITATIS -> 3
      */
     async getChannelId(channelCode) {
-        console.log(
-            `[ReservationService] Looking up channel: ${channelCode}`
-        );
-
         const [rows] = await this.db.execute(
             `
         SELECT id
@@ -32,11 +28,6 @@ export class ReservationService {
                 `Channel "${channelCode}" not found or inactive.`
             );
         }
-
-        console.log(
-            `[ReservationService] Channel ${channelCode} -> id=${rows[0].id}`
-        );
-
         return rows[0].id;
     }
 
@@ -79,10 +70,6 @@ export class ReservationService {
 
         const channelId =
             await this.getChannelId(channelCode);
-
-        console.log(
-            `[ReservationService] Upserting supplier_booking_id=${reservation.supplier_booking_id} channel=${channelCode}`
-        );
 
         const connection =
             await this.db.getConnection();
