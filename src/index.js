@@ -235,7 +235,7 @@ function buildDayAfterTomorrowSummary(reservations) {
   );
 
   return [
-    `📋 TOUR LUSA (${formattedDate})`,
+    `*📋 TOUR LUSA (${formattedDate})*`,
     "",
     `Total reservasi: ${reservations.length} | Total orang: ${totalPax}`,
   ].join("\n");
