@@ -8,7 +8,9 @@ export async function parseBookingDetail(
     `[Civitatis] Parsing booking detail: ${bookingId}`
   );
 
-  const result = {};
+  await dismissDashboardNotice(page);
+
+  const result = { client: { name: null, phone: null }, warnings: [] };
 
   const screenshotService =
     new ReservationScreenshotService();
@@ -34,8 +36,13 @@ export async function parseBookingDetail(
    * =====================================================
    */
 
-  result.client =
-    await parseClientDetails(page);
+  try {
+    result.client = await parseClientDetails(page);
+  } catch (error) {
+    result.warnings.push({ stage: "client-details", message: error.message });
+    console.warn(`[Civitatis] Booking ${bookingId}: client details unavailable (${error.name}). Reservation preserved.`);
+    return result;
+  }
 
   /*
    * =====================================================
@@ -43,8 +50,12 @@ export async function parseBookingDetail(
    * =====================================================
    */
 
-  result.client.phone =
-    await showClientTelephone(page);
+  try {
+    result.client.phone = await showClientTelephone(page);
+  } catch (error) {
+    result.warnings.push({ stage: "client-phone", message: error.message });
+    console.warn(`[Civitatis] Booking ${bookingId}: phone unavailable (${error.name}). Reservation preserved.`);
+  }
 
   console.log(
     "[Civitatis] Booking detail parsed."
@@ -199,71 +210,39 @@ async function parseClientDetails(page) {
     );
   }
 
-  /*
-   * Klik header Client details
-   * kalau belum terbuka.
-   */
+  const header = await section.$("a.myaccount-data__item__header");
+  const bodyVisible = await section.evaluate(element => {
+    const body = element.querySelector(".myaccount-data__item__body");
+    return Boolean(body && getComputedStyle(body).display !== "none" &&
+      getComputedStyle(body).visibility !== "hidden" && body.getClientRects().length);
+  });
 
-  const header =
-    await section.$(
-      "a.myaccount-data__item__header"
+  if (!bodyVisible && header) {
+    await header.click();
+  }
+
+  await section.waitForSelector(".myaccount-data__item__body", {
+    visible: true,
+    timeout: 15000,
+  });
+
+  // Agency bookings require explicitly revealing customer details first.
+  const links = await section.$$("a");
+  for (const link of links) {
+    const isRevealLink = await link.evaluate(el =>
+      el.textContent.trim().toLowerCase() === "view customer details" &&
+      getComputedStyle(el).display !== "none" && el.getClientRects().length > 0
     );
-
-  if (header) {
-    const visible =
-      await section.evaluate(
-        element => {
-          const body =
-            element.querySelector(
-              ".myaccount-data__item__body"
-            );
-
-          if (!body) {
-            return false;
-          }
-
-          const style =
-            window.getComputedStyle(
-              body
-            );
-
-          return (
-            style.display !== "none"
-          );
-        }
-      );
-
-    if (!visible) {
-      console.log(
-        "[Civitatis] Opening Client details..."
-      );
-
-      await header.click();
-
-      await page.waitForFunction(
-        element => {
-          const body =
-            element.querySelector(
-              ".myaccount-data__item__body"
-            );
-
-          if (!body) {
-            return false;
-          }
-
-          return (
-            window.getComputedStyle(
-              body
-            ).display !== "none"
-          );
-        },
-        {
-          timeout: 5000,
-        },
-        section
-      );
+    if (isRevealLink) {
+      await link.click();
+      break;
     }
   }
+
+  await section.waitForSelector(".m-client-data-list", {
+    visible: true,
+    timeout: 15000,
+  });
 
   /*
    * Ambil nama client.
@@ -594,6 +573,11 @@ async function getPhoneFromSection(
     await section.$eval(
       '.m-client-data-list a[href^="tel:"]',
       el => {
+        if (!el.getClientRects().length ||
+            getComputedStyle(el).display === "none" ||
+            getComputedStyle(el).visibility === "hidden") {
+          return null;
+        }
         const href =
           el.getAttribute(
             "href"
@@ -611,4 +595,26 @@ async function getPhoneFromSection(
     ).catch(() => null);
 
   return phone;
+}
+
+/** Dismiss only the known, non-binding dashboard announcement. */
+async function dismissDashboardNotice(page) {
+  const buttons = await page.$$(".popupbox.is-active button");
+  for (const button of buttons) {
+    const isNotice = await button.evaluate(el => {
+      const popup = el.closest(".popupbox.is-active");
+      return el.textContent.trim() === "Understood" &&
+        popup?.textContent.includes("Updates to the supplier dashboard!");
+    });
+    if (!isNotice) continue;
+    await button.click();
+    await page.waitForFunction(() =>
+      !Array.from(document.querySelectorAll(".popupbox.is-active")).some(popup =>
+        popup.textContent.includes("Updates to the supplier dashboard!") &&
+        getComputedStyle(popup).display !== "none" &&
+        getComputedStyle(popup).visibility !== "hidden" &&
+        popup.getClientRects().length > 0
+      ), { timeout: 15000 });
+    return;
+  }
 }
