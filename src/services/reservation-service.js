@@ -108,7 +108,7 @@ export class ReservationService {
 
               customer_name = ?,
               customer_email = ?,
-              customer_phone = ?,
+              customer_phone = COALESCE(NULLIF(?, ''), customer_phone),
 
               pax_total = ?,
               language = ?,
@@ -307,7 +307,7 @@ export class ReservationService {
         status: reservation.status ?? "NEW",
       };
     } catch (error) {
-      await connection.rollback();
+      await connection.rollback().catch(() => {});
 
       throw error;
     } finally {
@@ -340,7 +340,7 @@ export class ReservationService {
       } catch (error) {
         console.error(
           `[ReservationService] Failed to upsert supplier_booking_id=${reservation?.supplier_booking_id}:`,
-          error.message,
+          describeDatabaseError(error),
         );
 
         results.push({
@@ -352,7 +352,7 @@ export class ReservationService {
 
           channel: channelCode,
 
-          error: error.message,
+          error: describeDatabaseError(error),
         });
       }
     }
@@ -363,4 +363,13 @@ export class ReservationService {
   async close() {
     await this.db.end();
   }
+}
+
+
+function describeDatabaseError(error) {
+  const parts = [error?.name, error?.code, error?.errno, error?.sqlState, error?.message].filter(Boolean);
+  for (const child of error?.errors ?? []) {
+    parts.push([child.code, child.syscall, child.message].filter(Boolean).join(": "));
+  }
+  return parts.join(" | ") || "Unknown database error";
 }

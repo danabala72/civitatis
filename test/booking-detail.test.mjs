@@ -51,3 +51,37 @@ test('agency reveal is followed by a visibility wait; phone failure preserves na
   assert.equal(result.warnings[0].stage, 'client-phone');
   assert.deepEqual(calls.slice(-2), ['reveal-agency', '.m-client-data-list']);
 });
+
+test('phone flow clicks visible labels instead of hidden inputs', async () => {
+  const calls = [];
+  let revealed = false;
+  const reservation = {
+    $eval: async () => 'Reservation details',
+    $$eval: async () => ({ Language: 'Italian' }),
+  };
+  const client = {
+    $eval: async selector => selector.includes('header') ? 'Client details' : selector.includes('tel:') ? (revealed ? '+390000000000' : null) : 'Test Customer',
+    $: async () => ({}),
+    evaluate: async () => true,
+    waitForSelector: async () => ({}),
+    $$: async selector => selector === 'a' ? [] : [{evaluate: async () => 'see client telephone number', click: async () => {}}],
+  };
+  const page = {
+    $$: async selector => selector.includes('popupbox') ? [] : [reservation, client],
+    waitForSelector: async (selector, options) => {
+      if (selector.includes('reason_id')) throw new Error('Hidden radio must not be awaited');
+      if (selector.endsWith('#condition')) assert.equal(options.visible, false);
+      return {
+        evaluate: async () => false,
+        type: async () => {},
+        click: async () => { calls.push(selector); if (selector.includes('submit')) revealed = true; },
+      };
+    },
+    waitForFunction: async () => {},
+  };
+  const result = await parseBookingDetail(page, 'test');
+  assert.equal(result.client.phone, '+390000000000');
+  assert.equal(result.warnings.length, 0);
+  assert.ok(calls.some(s => s.includes('label[for="reason_5"]')));
+  assert.ok(calls.some(s => s.includes('label[for="condition"]')));
+});

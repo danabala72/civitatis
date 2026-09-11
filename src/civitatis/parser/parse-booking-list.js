@@ -1,3 +1,4 @@
+import { dismissDashboardNotice } from "./parse-booking-detail.js";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat.js";
 
@@ -7,6 +8,8 @@ dayjs.extend(customParseFormat);
 
 export async function parseBookingList(page) {
   console.log("[Civitatis] Parsing booking list...");
+
+  await dismissDashboardNotice(page);
 
   const result = [];
 
@@ -181,67 +184,37 @@ export async function parseBookingList(page) {
        * =================================================
        */
 
-      const expanded = await serviceRow.evaluate((row) =>
-        row.classList.contains("_clicked-tr"),
-      );
-
-      /*
-       * =================================================
-       * CLICK SERVICE
-       * =================================================
-       */
-
-      if (!expanded) {
-        try {
-          await serviceRow.click();
-
-          /*
-           * Civitatis melakukan loading/request
-           * setelah service diklik.
-           */
-          await sleep(2000);
-        } catch (error) {
-          services.push({
-            index: serviceIndex,
-            time,
-            service,
-            bookingCount,
-            bookings: [],
-          });
-
-          continue;
+      const expected = Number(bookingCount.replace(/[^0-9]/g, ""));
+      let bookings = [];
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        await dismissDashboardNotice(page);
+        const dateHandle = await getDateItem(page, targetDate.index);
+        const row = (await getServiceRows(dateHandle))[serviceIndex];
+        if (!row) throw new Error(`Service row missing: ${service}`);
+        const expanded = await row.evaluate(el => el.classList.contains("_clicked-tr"));
+        if (!expanded) await row.click();
+        const started = Date.now();
+        while (Date.now() - started < 15000) {
+          const freshDate = await getDateItem(page, targetDate.index);
+          const freshRow = freshDate && (await getServiceRows(freshDate))[serviceIndex];
+          if (freshRow) bookings = await getBookingLinks(freshRow);
+          if (bookings.length && (!expected || bookings.length === expected)) break;
+          await sleep(200);
+        }
+        if (bookings.length && (!expected || bookings.length === expected)) break;
+        console.warn(`[Civitatis] Retry service ${service}: expected=${expected}, found=${bookings.length}`);
+        // Reset a stalled expanded row before the next attempt.
+        if (attempt < 2) {
+          const freshDate = await getDateItem(page, targetDate.index);
+          const freshRow = (await getServiceRows(freshDate))[serviceIndex];
+          if (freshRow && await freshRow.evaluate(el => el.classList.contains("_clicked-tr"))) {
+            await freshRow.click();
+          }
         }
       }
-
-      /*
-       * =================================================
-       * WAIT CHILD TABLE
-       * =================================================
-       */
-
-      const childReady = await waitForChildTable(serviceRow);
-
-      if (!childReady) {
-        console.log("[Civitatis] Child table not available.");
-
-        services.push({
-          index: serviceIndex,
-          time,
-          service,
-          bookingCount,
-          bookings: [],
-        });
-
-        continue;
+      if (!bookings.length || (expected && bookings.length !== expected)) {
+        throw new Error(`Incomplete booking list: ${date} / ${service}: expected=${expected}, found=${bookings.length}`);
       }
-
-      /*
-       * =================================================
-       * GET BOOKINGS
-       * =================================================
-       */
-
-      const bookings = await getBookingLinks(serviceRow);
 
       console.log(`[Civitatis] Found ${bookings.length} bookings.`);
 
@@ -477,3 +450,4 @@ async function getBookingLinks(serviceRow) {
     await child.dispose();
   }
 }
+

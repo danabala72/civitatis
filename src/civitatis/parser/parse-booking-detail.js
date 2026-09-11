@@ -40,7 +40,7 @@ export async function parseBookingDetail(
     result.client = await parseClientDetails(page);
   } catch (error) {
     result.warnings.push({ stage: "client-details", message: error.message });
-    console.warn(`[Civitatis] Booking ${bookingId}: client details unavailable (${error.name}). Reservation preserved.`);
+    console.warn(`[Civitatis] Booking ${bookingId}: client details unavailable (${error.name}: ${error.message}). Reservation preserved.`);
     return result;
   }
 
@@ -54,7 +54,7 @@ export async function parseBookingDetail(
     result.client.phone = await showClientTelephone(page);
   } catch (error) {
     result.warnings.push({ stage: "client-phone", message: error.message });
-    console.warn(`[Civitatis] Booking ${bookingId}: phone unavailable (${error.name}). Reservation preserved.`);
+    console.warn(`[Civitatis] Booking ${bookingId}: phone unavailable (${error.name}: ${error.message}). Reservation preserved.`);
   }
 
   console.log(
@@ -342,7 +342,7 @@ async function showClientTelephone(page) {
     ".popupbox.is-active",
     {
       visible: true,
-      timeout: 5000,
+      timeout: 15000,
     }
   );
 
@@ -358,10 +358,10 @@ async function showClientTelephone(page) {
 
   const otherReason =
     await page.waitForSelector(
-      'input[name="reason_id"][value="5"]',
+      '.popupbox.is-active #phoneRequestReasons label[for="reason_5"]',
       {
         visible: true,
-        timeout: 5000,
+        timeout: 15000,
       }
     );
 
@@ -375,10 +375,10 @@ async function showClientTelephone(page) {
 
   const reasonInput =
     await page.waitForSelector(
-      "#reason_extra_5",
+      '.popupbox.is-active #reason_extra_5',
       {
         visible: true,
-        timeout: 5000,
+        timeout: 15000,
       }
     );
 
@@ -396,10 +396,10 @@ async function showClientTelephone(page) {
 
   const condition =
     await page.waitForSelector(
-      "#condition",
+      '.popupbox.is-active #condition',
       {
-        visible: true,
-        timeout: 5000,
+        visible: false,
+        timeout: 15000,
       }
     );
 
@@ -413,7 +413,11 @@ async function showClientTelephone(page) {
     );
 
   if (!checked) {
-    await condition.click();
+    const conditionLabel = await page.waitForSelector(
+      '.popupbox.is-active #phoneRequestReasons label[for="condition"]',
+      { visible: true, timeout: 15000 }
+    );
+    await conditionLabel.click();
   }
 
   /*
@@ -427,7 +431,7 @@ async function showClientTelephone(page) {
       '.popupbox.is-active button[type="submit"]',
       {
         visible: true,
-        timeout: 5000,
+        timeout: 15000,
       }
     );
 
@@ -464,14 +468,12 @@ async function showClientTelephone(page) {
    */
 
   await page.waitForFunction(
-    () =>
-      Boolean(
-        document.querySelector(
-          'a[href^="tel:"]'
-        )
-      ),
+    () => Array.from(document.querySelectorAll('.m-client-data-list a[href^="tel:"]'))
+      .some(el => el.getClientRects().length > 0 &&
+        getComputedStyle(el).display !== "none" &&
+        getComputedStyle(el).visibility !== "hidden"),
     {
-      timeout: 5000,
+      timeout: 15000,
     }
   ).catch(() => { });
 
@@ -481,8 +483,7 @@ async function showClientTelephone(page) {
     );
 
   console.log(
-    `[Civitatis] Client phone: ${phone || "not found"
-    }`
+    `[Civitatis] Client phone: ${phone ? "available" : "not found"}`
   );
 
   return phone;
@@ -598,7 +599,7 @@ async function getPhoneFromSection(
 }
 
 /** Dismiss only the known, non-binding dashboard announcement. */
-async function dismissDashboardNotice(page) {
+export async function dismissDashboardNotice(page) {
   const buttons = await page.$$(".popupbox.is-active button");
   for (const button of buttons) {
     const isNotice = await button.evaluate(el => {
