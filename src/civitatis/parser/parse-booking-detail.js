@@ -1,4 +1,5 @@
 import { ReservationScreenshotService } from "./reservation-screenshot-service.js";
+import { sleep } from "../../utils/sleep.js";
 
 export async function parseBookingDetail(
   page,
@@ -239,10 +240,19 @@ async function parseClientDetails(page) {
     }
   }
 
-  await section.waitForSelector(".m-client-data-list", {
-    visible: true,
-    timeout: 15000,
-  });
+  /*
+   * Data client bisa saja sudah ada di DOM
+   * meskipun masih tersembunyi (class `hide`).
+   * Tunggu keberadaan di DOM, bukan visibility.
+   */
+
+  const listFound = await waitForClientList(section, 20000);
+
+  if (!listFound) {
+    throw new Error(
+      "Client data list not found after reveal."
+    );
+  }
 
   /*
    * Ambil nama client.
@@ -260,6 +270,28 @@ async function parseClientDetails(page) {
   return {
     name,
   };
+}
+
+/**
+ * Tunggu `.m-client-data-list` muncul di DOM
+ * (tidak perlu visible). Mengembalikan true/false.
+ */
+async function waitForClientList(section, timeoutMs) {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeoutMs) {
+    const exists = await section.evaluate(el => {
+      return Boolean(el.querySelector(".m-client-data-list"));
+    });
+
+    if (exists) {
+      return true;
+    }
+
+    await sleep(500);
+  }
+
+  return false;
 }
 
 
@@ -574,11 +606,6 @@ async function getPhoneFromSection(
     await section.$eval(
       '.m-client-data-list a[href^="tel:"]',
       el => {
-        if (!el.getClientRects().length ||
-            getComputedStyle(el).display === "none" ||
-            getComputedStyle(el).visibility === "hidden") {
-          return null;
-        }
         const href =
           el.getAttribute(
             "href"

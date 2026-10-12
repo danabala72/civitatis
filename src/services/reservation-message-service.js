@@ -31,7 +31,7 @@ export class ReservationMessageService {
     }
 
     const language = String(
-      reservation.language ?? ""
+      reservation.language ?? "IT"
     )
       .trim()
       .toUpperCase();
